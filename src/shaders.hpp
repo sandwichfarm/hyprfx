@@ -3,7 +3,7 @@
 #include <string>
 
 // Vertex shader - passthrough with texture coordinates
-inline const std::string BMW_VERT = R"#(
+inline const std::string HFX_VERT = R"#(
 #version 300 es
 precision mediump float;
 
@@ -22,7 +22,7 @@ void main() {
 
 // Common GLSL utilities (ported from Burn My Windows common.glsl)
 // Stripped of GNOME/KWin platform abstractions, adapted for direct texture access.
-inline const std::string BMW_COMMON = R"#(
+inline const std::string HFX_COMMON = R"#(
 #version 300 es
 precision mediump float;
 
@@ -204,135 +204,3 @@ float getAbsoluteEdgeMask(float fadePixels, float offset) {
 }
 )#";
 
-// Fire effect fragment shader (ported from Burn My Windows)
-inline const std::string BMW_FRAG_FIRE = R"#(
-uniform bool u3DNoise;
-uniform float uScale;
-uniform float uMovementSpeed;
-uniform vec4 uGradient1;
-uniform vec4 uGradient2;
-uniform vec4 uGradient3;
-uniform vec4 uGradient4;
-uniform vec4 uGradient5;
-uniform float uSeed;
-
-const float EDGE_FADE  = 70.0;
-const float FADE_WIDTH = 0.1;
-const float HIDE_TIME  = 0.4;
-
-vec4 getFireColor(float v, vec4 c0, vec4 c1, vec4 c2, vec4 c3, vec4 c4) {
-    float steps[5];
-    steps[0] = 0.0; steps[1] = 0.2; steps[2] = 0.35; steps[3] = 0.5; steps[4] = 0.8;
-    vec4 colors[5];
-    colors[0] = c0; colors[1] = c1; colors[2] = c2; colors[3] = c3; colors[4] = c4;
-    if (v < steps[0]) return colors[0];
-    for (int i = 0; i < 4; ++i) {
-        if (v <= steps[i + 1]) {
-            return mix(colors[i], colors[i + 1], vec4(v - steps[i]) / (steps[i + 1] - steps[i]));
-        }
-    }
-    return colors[4];
-}
-
-vec2 effectMask(float hideTime, float fadeWidth, float edgeFadeWidth) {
-    float progress = easeOutQuad(uProgress);
-    float burnProgress = clamp(progress / hideTime, 0.0, 1.0);
-    float afterBurnProgress = clamp((progress - hideTime) / (1.0 - hideTime), 0.0, 1.0);
-    float t = iTexCoord.t * (1.0 - fadeWidth);
-    float windowMask = 1.0 - clamp((burnProgress - t) / fadeWidth, 0.0, 1.0);
-    float effectMask = clamp(t * (1.0 - windowMask) / burnProgress, 0.0, 1.0);
-    if (progress > hideTime) {
-        float fade = sqrt(1.0 - afterBurnProgress * afterBurnProgress);
-        effectMask *= mix(1.0, 1.0 - t, afterBurnProgress) * fade;
-    }
-    effectMask *= getAbsoluteEdgeMask(edgeFadeWidth, 0.5);
-    if (uForOpening) {
-        windowMask = 1.0 - windowMask;
-    }
-    return vec2(windowMask, effectMask);
-}
-
-void main() {
-    vec2 uv = iTexCoord.st * uSize / vec2(400.0, 600.0) / uScale;
-    uv.y += uProgress * uDuration * uMovementSpeed;
-
-    float noise = u3DNoise
-        ? simplex3DFractal(vec3(uv * 4.0, uProgress * uDuration * uMovementSpeed * 1.5))
-        : simplex2DFractal(uv * 4.0);
-
-    vec2 mask = effectMask(HIDE_TIME, FADE_WIDTH, EDGE_FADE);
-    noise *= mask.y;
-
-    vec4 fire = getFireColor(noise, uGradient1, uGradient2, uGradient3, uGradient4, uGradient5);
-
-    vec4 oColor = getInputColor(iTexCoord.st);
-    oColor.a *= mask.x;
-    oColor = alphaOver(oColor, fire);
-
-    setOutputColor(oColor);
-}
-)#";
-
-// TV shutdown effect fragment shader (ported from Burn My Windows)
-inline const std::string BMW_FRAG_TV = R"#(
-uniform vec4 uColor;
-
-const float BLUR_WIDTH = 0.01;
-const float TB_TIME    = 0.7;
-const float LR_TIME    = 0.4;
-const float LR_DELAY   = 0.6;
-const float FF_TIME    = 0.1;
-const float SCALING    = 0.5;
-
-void main() {
-    float prog = uForOpening ? 1.0 - easeOutQuad(uProgress) : easeOutQuad(uProgress);
-
-    float scale = 1.0 / mix(1.0, SCALING, prog) - 1.0;
-    vec2 coords = iTexCoord.st;
-    coords.y = coords.y * (scale + 1.0) - scale * 0.5;
-
-    float tbProg = smoothstep(0.0, 1.0, clamp(prog / TB_TIME, 0.0, 1.0));
-    float lrProg = smoothstep(0.0, 1.0, clamp((prog - LR_DELAY) / LR_TIME, 0.0, 1.0));
-    float ffProg = smoothstep(0.0, 1.0, clamp((prog - 1.0 + FF_TIME) / FF_TIME, 0.0, 1.0));
-
-    float tb = coords.y * 2.0;
-    tb = tb < 1.0 ? tb : 2.0 - tb;
-
-    float lr = coords.x * 2.0;
-    lr = lr < 1.0 ? lr : 2.0 - lr;
-
-    float tbMask = 1.0 - smoothstep(0.0, 1.0, clamp((tbProg - tb) / BLUR_WIDTH, 0.0, 1.0));
-    float lrMask = 1.0 - smoothstep(0.0, 1.0, clamp((lrProg - lr) / BLUR_WIDTH, 0.0, 1.0));
-    float ffMask = 1.0 - smoothstep(0.0, 1.0, ffProg);
-
-    float mask = tbMask * lrMask * ffMask;
-
-    vec4 oColor = getInputColor(coords);
-    oColor.rgb = mix(oColor.rgb, uColor.rgb * oColor.a, uColor.a * smoothstep(0.0, 1.0, prog));
-    oColor.a *= mask;
-
-    setOutputColor(oColor);
-}
-)#";
-
-// Pixelate effect fragment shader (ported from Burn My Windows)
-inline const std::string BMW_FRAG_PIXELATE = R"#(
-uniform float uPixelSize;
-uniform float uNoise;
-
-void main() {
-    float progress = uForOpening ? 1.0 - uProgress : uProgress;
-
-    float pixelSize = ceil(uPixelSize * progress + 1.0);
-    vec2 pixelGrid = vec2(pixelSize) / uSize;
-    vec2 texcoord = iTexCoord.st - mod(iTexCoord.st, pixelGrid) + pixelGrid * 0.5;
-    vec4 oColor = getInputColor(texcoord);
-
-    float random = simplex2DFractal(texcoord * uNoise * uSize / 1000.0) * 1.5 - 0.25;
-    if (progress > random) {
-        oColor.a *= max(0.0, 1.0 - (progress - random) * 20.0);
-    }
-
-    setOutputColor(oColor);
-}
-)#";

@@ -1,8 +1,40 @@
-#include "shaderManager.hpp"
-#include "shaders.hpp"
+#include "EffectRegistry.hpp"
+#include "../shaders.hpp"
 
 #include <hyprland/src/render/OpenGL.hpp>
 #include <stdexcept>
+
+EffectRegistry& EffectRegistry::instance() {
+    static EffectRegistry reg;
+    return reg;
+}
+
+void EffectRegistry::registerEffect(std::unique_ptr<IEffect> effect) {
+    auto name = effect->name();
+    m_effects[name].effect = std::move(effect);
+}
+
+void EffectRegistry::registerAllConfigs(HANDLE handle) {
+    for (auto& [name, entry] : m_effects) {
+        entry.effect->registerConfig(handle);
+    }
+}
+
+bool EffectRegistry::hasEffect(const std::string& name) const {
+    return m_effects.contains(name);
+}
+
+IEffect* EffectRegistry::getEffect(const std::string& name) {
+    auto it = m_effects.find(name);
+    return it != m_effects.end() ? it->second.effect.get() : nullptr;
+}
+
+SHFXShader* EffectRegistry::getShader(const std::string& name) {
+    auto it = m_effects.find(name);
+    return it != m_effects.end() ? &it->second.shader : nullptr;
+}
+
+// --- Shader compilation helpers (moved from shaderManager.cpp) ---
 
 static GLuint compileShader(GLenum type, const std::string& src) {
     auto shader = glCreateShader(type);
@@ -18,7 +50,7 @@ static GLuint compileShader(GLenum type, const std::string& src) {
         std::string log(logLen, ' ');
         glGetShaderInfoLog(shader, logLen, nullptr, log.data());
         glDeleteShader(shader);
-        throw std::runtime_error("BMW shader compile failed: " + log);
+        throw std::runtime_error("HFX shader compile failed: " + log);
     }
     return shader;
 }
@@ -45,16 +77,15 @@ static GLuint createProgram(const std::string& vert, const std::string& frag) {
         std::string log(logLen, ' ');
         glGetProgramInfoLog(prog, logLen, nullptr, log.data());
         glDeleteProgram(prog);
-        throw std::runtime_error("BMW shader link failed: " + log);
+        throw std::runtime_error("HFX shader link failed: " + log);
     }
     return prog;
 }
 
-static void setupVAO(SBMWShader& shader) {
+static void setupVAO(SHFXShader& shader) {
     glGenVertexArrays(1, &shader.vao);
     glBindVertexArray(shader.vao);
 
-    // Position VBO
     if (shader.posAttrib != -1) {
         glGenBuffers(1, &shader.vboPos);
         glBindBuffer(GL_ARRAY_BUFFER, shader.vboPos);
@@ -63,7 +94,6 @@ static void setupVAO(SBMWShader& shader) {
         glVertexAttribPointer(shader.posAttrib, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     }
 
-    // UV VBO
     if (shader.texAttrib != -1) {
         glGenBuffers(1, &shader.vboUV);
         glBindBuffer(GL_ARRAY_BUFFER, shader.vboUV);
@@ -76,7 +106,7 @@ static void setupVAO(SBMWShader& shader) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-static void lookupCommonUniforms(SBMWShader& shader) {
+static void lookupCommonUniforms(SHFXShader& shader) {
     shader.proj        = glGetUniformLocation(shader.program, "proj");
     shader.tex         = glGetUniformLocation(shader.program, "tex");
     shader.uProgress   = glGetUniformLocation(shader.program, "uProgress");
@@ -88,49 +118,7 @@ static void lookupCommonUniforms(SBMWShader& shader) {
     shader.texAttrib   = glGetAttribLocation(shader.program, "texcoord");
 }
 
-static void compileFireShader(SBMWShader& shader) {
-    std::string fragSrc = BMW_COMMON + BMW_FRAG_FIRE;
-    shader.program = createProgram(BMW_VERT, fragSrc);
-
-    lookupCommonUniforms(shader);
-
-    shader.uGradient1    = glGetUniformLocation(shader.program, "uGradient1");
-    shader.uGradient2    = glGetUniformLocation(shader.program, "uGradient2");
-    shader.uGradient3    = glGetUniformLocation(shader.program, "uGradient3");
-    shader.uGradient4    = glGetUniformLocation(shader.program, "uGradient4");
-    shader.uGradient5    = glGetUniformLocation(shader.program, "uGradient5");
-    shader.u3DNoise      = glGetUniformLocation(shader.program, "u3DNoise");
-    shader.uScale        = glGetUniformLocation(shader.program, "uScale");
-    shader.uMovementSpeed = glGetUniformLocation(shader.program, "uMovementSpeed");
-    shader.uSeed         = glGetUniformLocation(shader.program, "uSeed");
-
-    setupVAO(shader);
-}
-
-static void compileTVShader(SBMWShader& shader) {
-    std::string fragSrc = BMW_COMMON + BMW_FRAG_TV;
-    shader.program = createProgram(BMW_VERT, fragSrc);
-
-    lookupCommonUniforms(shader);
-
-    shader.uColor = glGetUniformLocation(shader.program, "uColor");
-
-    setupVAO(shader);
-}
-
-static void compilePixelateShader(SBMWShader& shader) {
-    std::string fragSrc = BMW_COMMON + BMW_FRAG_PIXELATE;
-    shader.program = createProgram(BMW_VERT, fragSrc);
-
-    lookupCommonUniforms(shader);
-
-    shader.uPixelSize = glGetUniformLocation(shader.program, "uPixelSize");
-    shader.uNoise     = glGetUniformLocation(shader.program, "uNoise");
-
-    setupVAO(shader);
-}
-
-static void destroyShader(SBMWShader& shader) {
+static void destroyShader(SHFXShader& shader) {
     if (shader.vao) {
         glDeleteVertexArrays(1, &shader.vao);
         shader.vao = 0;
@@ -149,27 +137,25 @@ static void destroyShader(SBMWShader& shader) {
     }
 }
 
-namespace ShaderManager {
+void EffectRegistry::compileAllShaders() {
+    for (auto& [name, entry] : m_effects) {
+        auto& shader = entry.shader;
+        std::string fragSrc = HFX_COMMON + entry.effect->fragmentSource();
+        shader.program = createProgram(HFX_VERT, fragSrc);
 
-void compileAllShaders() {
-    compileFireShader(g_pGlobalState->fireShader);
-    compileTVShader(g_pGlobalState->tvShader);
-    compilePixelateShader(g_pGlobalState->pixelateShader);
-}
+        lookupCommonUniforms(shader);
 
-void destroyAllShaders() {
-    destroyShader(g_pGlobalState->fireShader);
-    destroyShader(g_pGlobalState->tvShader);
-    destroyShader(g_pGlobalState->pixelateShader);
-}
+        // Look up effect-specific uniforms
+        for (const auto& uName : entry.effect->uniformNames()) {
+            shader.uniforms[uName] = glGetUniformLocation(shader.program, uName.c_str());
+        }
 
-SBMWShader* getShader(eBMWEffect effect) {
-    switch (effect) {
-        case BMW_EFFECT_FIRE: return &g_pGlobalState->fireShader;
-        case BMW_EFFECT_TV: return &g_pGlobalState->tvShader;
-        case BMW_EFFECT_PIXELATE: return &g_pGlobalState->pixelateShader;
-        default: return nullptr;
+        setupVAO(shader);
     }
 }
 
-} // namespace ShaderManager
+void EffectRegistry::destroyAllShaders() {
+    for (auto& [name, entry] : m_effects) {
+        destroyShader(entry.shader);
+    }
+}

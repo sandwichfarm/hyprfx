@@ -8,8 +8,8 @@ class CBMWDecoration;
 class CBMWPassElement : public IPassElement {
   public:
     struct SBMWData {
-        CBMWDecoration*   deco        = nullptr;   // for open animations (via decoration)
-        SClosingAnimation* closingAnim = nullptr;   // for close animations (via render hook)
+        CBMWDecoration*   deco        = nullptr;
+        SClosingAnimation* closingAnim = nullptr;
         float              alpha       = 1.0f;
         PHLMONITORREF      pMonitor;
     };

@@ -1,30 +1,22 @@
 #include "decoration.hpp"
 #include "passElement.hpp"
-#include "shaderManager.hpp"
+#include "effects/EffectRegistry.hpp"
 
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/desktop/view/Window.hpp>
 #include <hyprland/src/render/Renderer.hpp>
-
-static eBMWEffect effectFromString(const std::string& str) {
-    if (str == "fire") return BMW_EFFECT_FIRE;
-    if (str == "tv") return BMW_EFFECT_TV;
-    if (str == "pixelate") return BMW_EFFECT_PIXELATE;
-    return BMW_EFFECT_NONE;
-}
 
 CBMWDecoration::CBMWDecoration(PHLWINDOW pWindow, bool isClosing)
     : IHyprWindowDecoration(pWindow), m_pWindow(pWindow), m_bIsClosing(isClosing) {
 
     m_startTime = std::chrono::steady_clock::now();
 
-    // Read config - separate static pointers for open vs close
     if (isClosing) {
         static auto* const PCLOSE = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:close_effect")->getDataStaticPtr();
-        m_effect = effectFromString(*PCLOSE);
+        m_effectName = *PCLOSE;
     } else {
         static auto* const POPEN = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:open_effect")->getDataStaticPtr();
-        m_effect = effectFromString(*POPEN);
+        m_effectName = *POPEN;
     }
 
     static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:duration")->getDataStaticPtr();
@@ -54,7 +46,7 @@ void CBMWDecoration::onPositioningReply(const SDecorationPositioningReply& reply
 
 void CBMWDecoration::draw(PHLMONITOR pMonitor, const float& a) {
     const auto PWINDOW = m_pWindow.lock();
-    if (!PWINDOW || m_effect == BMW_EFFECT_NONE)
+    if (!PWINDOW || m_effectName.empty() || !EffectRegistry::instance().hasEffect(m_effectName))
         return;
 
     float progress = getProgress();

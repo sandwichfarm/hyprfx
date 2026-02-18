@@ -3,6 +3,7 @@
 #define WLR_USE_UNSTABLE
 
 #include <chrono>
+#include <string>
 #include <hyprland/src/plugins/PluginAPI.hpp>
 #include <hyprland/src/render/decorations/IHyprWindowDecoration.hpp>
 #include "globals.hpp"
@@ -25,9 +26,9 @@ class CBMWDecoration : public IHyprWindowDecoration {
 
   private:
     PHLWINDOWREF m_pWindow;
-    bool         m_bIsClosing = false;
-    eBMWEffect   m_effect     = BMW_EFFECT_FIRE;
-    float        m_fDuration  = 1.0f;
+    bool         m_bIsClosing   = false;
+    std::string  m_effectName;
+    float        m_fDuration    = 1.0f;
 
     std::chrono::steady_clock::time_point m_startTime;
     bool m_bDone = false;
