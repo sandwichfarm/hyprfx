@@ -1,0 +1,5 @@
+- Instructions for contributing to this project are in @AGENTS.md
+- Guide for writing new effects is in @EFFECTS.md
+- Do not attempt sudo commands — provide the user with copy-paste commands instead
+- Do not use --break-system-packages for pip, use virtual environments
+- When reviewing GitHub PR comments with `gh`, only pay attention to UNRESOLVED inline review comments — ignore resolved ones
