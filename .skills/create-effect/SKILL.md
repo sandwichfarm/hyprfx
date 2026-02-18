@@ -2,6 +2,7 @@
 name: create-effect
 description: Create a new window effect for the HyprFX Hyprland plugin. Use when the user wants to add a new visual effect for window open/close animations, port a shader effect, or implement a custom GLSL effect.
 compatibility: Requires cmake and hyprland development headers to build and test.
+repository: https://github.com/sandwichfarm/hyprfx
 ---
 
 # Creating a New HyprFX Effect

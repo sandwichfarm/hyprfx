@@ -2,6 +2,7 @@
 name: install
 description: Install, update, or uninstall the HyprFX plugin for Hyprland. Use when the user wants to install hyprfx, set up the plugin, load it into Hyprland, update to a new version, or remove it.
 compatibility: Requires Hyprland compositor with matching development headers, cmake 3.27+, and a C++23 compiler. Linux only.
+repository: https://github.com/sandwichfarm/hyprfx
 ---
 
 # HyprFX Installation
@@ -20,7 +21,7 @@ Ask the user which method they prefer if not obvious from context:
 ### From a Git Remote
 
 ```sh
-hyprpm add https://github.com/sandwich/hyprfx
+hyprpm add https://github.com/sandwichfarm/hyprfx
 hyprpm enable hyprfx
 ```
 
