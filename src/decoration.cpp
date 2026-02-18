@@ -18,10 +18,14 @@ CBMWDecoration::CBMWDecoration(PHLWINDOW pWindow, bool isClosing)
 
     m_startTime = std::chrono::steady_clock::now();
 
-    // Read config
-    const std::string configKey = isClosing ? "plugin:bmw:close_effect" : "plugin:bmw:open_effect";
-    static auto* const PEFFECT = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, configKey)->getDataStaticPtr();
-    m_effect = effectFromString(*PEFFECT);
+    // Read config - separate static pointers for open vs close
+    if (isClosing) {
+        static auto* const PCLOSE = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:close_effect")->getDataStaticPtr();
+        m_effect = effectFromString(*PCLOSE);
+    } else {
+        static auto* const POPEN = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:open_effect")->getDataStaticPtr();
+        m_effect = effectFromString(*POPEN);
+    }
 
     static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:duration")->getDataStaticPtr();
     m_fDuration = static_cast<float>(**PDURATION);
@@ -55,20 +59,17 @@ void CBMWDecoration::draw(PHLMONITOR pMonitor, const float& a) {
 
     float progress = getProgress();
 
-    if (progress >= 1.0f && !m_bDone) {
+    if (progress >= 1.0f) {
         m_bDone = true;
-        // Animation complete - remove ourselves
-        // For closing windows, the window will be destroyed by Hyprland
         return;
     }
 
-    if (m_bDone)
-        return;
-
-    auto data = CBMWPassElement::SBMWData{this, a, pMonitor};
+    auto data = CBMWPassElement::SBMWData{};
+    data.deco = this;
+    data.alpha = a;
+    data.pMonitor = pMonitor;
     g_pHyprRenderer->m_renderPass.add(makeUnique<CBMWPassElement>(data));
 
-    // Request continuous redraws during animation
     damageEntire();
 }
 
@@ -77,7 +78,8 @@ eDecorationType CBMWDecoration::getDecorationType() {
 }
 
 void CBMWDecoration::updateWindow(PHLWINDOW pWindow) {
-    damageEntire();
+    if (!m_bDone)
+        damageEntire();
 }
 
 void CBMWDecoration::damageEntire() {

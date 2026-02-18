@@ -26,18 +26,28 @@ bool CBMWPassElement::needsPrecomputeBlur() {
 }
 
 std::optional<CBox> CBMWPassElement::boundingBox() {
-    const auto PWINDOW = m_data.deco->m_pWindow.lock();
-    if (!PWINDOW)
+    Vector2D pos, size;
+
+    if (m_data.closingAnim) {
+        pos = m_data.closingAnim->windowPos;
+        size = m_data.closingAnim->windowSize;
+    } else if (m_data.deco) {
+        auto w = m_data.deco->m_pWindow.lock();
+        if (!w)
+            return std::nullopt;
+        pos = w->m_realPosition->value();
+        size = w->m_realSize->value();
+    } else {
         return std::nullopt;
+    }
 
     auto pMonitor = m_data.pMonitor.lock();
     if (!pMonitor)
         return std::nullopt;
 
-    return CBox{PWINDOW->m_realPosition->value().x - pMonitor->m_position.x,
-                PWINDOW->m_realPosition->value().y - pMonitor->m_position.y,
-                PWINDOW->m_realSize->value().x,
-                PWINDOW->m_realSize->value().y};
+    return CBox{pos.x - pMonitor->m_position.x,
+                pos.y - pMonitor->m_position.y,
+                size.x, size.y};
 }
 
 static uint32_t colorConfigToRGBA(Hyprlang::INT val) {
@@ -52,34 +62,69 @@ static void vec4FromRGBA(uint32_t rgba, float out[4]) {
 }
 
 void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
-    const auto PWINDOW = m_data.deco->m_pWindow.lock();
-    if (!PWINDOW)
-        return;
+    // Determine window, effect, progress, duration, and whether this is an open or close animation
+    eBMWEffect effect;
+    float progress;
+    float duration;
+    bool isOpening;
 
-    eBMWEffect effect = m_data.deco->m_effect;
+    if (m_data.closingAnim) {
+        // Close animation via render hook — window may already be destroyed
+        effect = m_data.closingAnim->effect;
+        progress = m_data.closingAnim->getProgress();
+        duration = m_data.closingAnim->duration;
+        isOpening = false;
+    } else if (m_data.deco) {
+        // Open animation via decoration
+        auto PWINDOW = m_data.deco->m_pWindow.lock();
+        if (!PWINDOW)
+            return;
+        effect = m_data.deco->m_effect;
+        progress = m_data.deco->getProgress();
+        duration = m_data.deco->m_fDuration;
+        isOpening = !m_data.deco->m_bIsClosing;
+    } else {
+        return;
+    }
+
     SBMWShader* shader = ShaderManager::getShader(effect);
-    if (!shader || !shader->program)
+    if (!shader || !shader->program) {
+        Log::logger->log(Log::DEBUG, "[BMW] renderEffect: no shader");
         return;
+    }
 
-    float progress = m_data.deco->getProgress();
-    float duration = m_data.deco->m_fDuration;
-    bool isOpening = !m_data.deco->m_bIsClosing;
+    // Get window texture and geometry
+    SP<CTexture> texPtr;
+    Vector2D winPos, winSize;
 
-    // Get the window's framebuffer texture
-    PHLWINDOWREF ref{PWINDOW};
-    if (!g_pHyprOpenGL->m_windowFramebuffers.contains(ref))
+    if (m_data.closingAnim) {
+        // Close: use pre-captured snapshot texture and geometry
+        texPtr = m_data.closingAnim->snapshotTex;
+        winPos = m_data.closingAnim->windowPos;
+        winSize = m_data.closingAnim->windowSize;
+    } else if (m_data.deco) {
+        // Open: use live surface texture
+        auto w = m_data.deco->m_pWindow.lock();
+        if (!w)
+            return;
+        auto wlSurf = w->wlSurface();
+        auto surface = wlSurf ? wlSurf->resource() : nullptr;
+        if (surface)
+            texPtr = surface->m_current.texture;
+        winPos = w->m_realPosition->value();
+        winSize = w->m_realSize->value();
+    }
+
+    if (!texPtr || texPtr->m_texID == 0) {
+        Log::logger->log(Log::DEBUG, "[BMW] renderEffect: no texture (closing={})", m_data.closingAnim != nullptr);
         return;
-
-    auto& fb = g_pHyprOpenGL->m_windowFramebuffers.at(ref);
-    auto texPtr = fb.getTexture();
-    if (!texPtr || texPtr->m_texID == 0)
-        return;
+    }
 
     // Calculate window box in monitor-local coordinates
-    CBox windowBox = {PWINDOW->m_realPosition->value().x - pMonitor->m_position.x,
-                      PWINDOW->m_realPosition->value().y - pMonitor->m_position.y,
-                      PWINDOW->m_realSize->value().x,
-                      PWINDOW->m_realSize->value().y};
+    CBox windowBox = {winPos.x - pMonitor->m_position.x,
+                      winPos.y - pMonitor->m_position.y,
+                      winSize.x,
+                      winSize.y};
     windowBox.scale(pMonitor->m_scale).round();
 
     // Compute projection matrix
@@ -87,8 +132,8 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
     Mat3x3 matrix = g_pHyprOpenGL->m_renderData.monitorProjection.projectBox(windowBox, TRANSFORM, windowBox.rot);
     Mat3x3 glMatrix = g_pHyprOpenGL->m_renderData.projection.copy().multiply(matrix);
 
-    // Bind our shader
-    glUseProgram(shader->program);
+    // Use Hyprland's program tracker to switch shader
+    g_pHyprOpenGL->useProgram(shader->program);
 
     // Set projection matrix
     glMatrix.transpose();
@@ -105,8 +150,8 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
     glUniform1f(shader->uProgress, progress);
     glUniform1f(shader->uDuration, duration);
     glUniform1i(shader->uForOpening, isOpening ? 1 : 0);
-    glUniform2f(shader->uSize, PWINDOW->m_realSize->value().x * pMonitor->m_scale,
-                               PWINDOW->m_realSize->value().y * pMonitor->m_scale);
+    glUniform2f(shader->uSize, winSize.x * pMonitor->m_scale,
+                               winSize.y * pMonitor->m_scale);
     glUniform1f(shader->uPadding, 0.0f);
 
     // Set effect-specific uniforms
@@ -135,7 +180,17 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
         glUniform1f(shader->uScale, static_cast<float>(**PSCALE));
         glUniform1i(shader->u3DNoise, **P3DNOISE ? 1 : 0);
         glUniform1f(shader->uMovementSpeed, static_cast<float>(**PSPEED));
-        glUniform1f(shader->uSeed, static_cast<float>(PWINDOW->getPID()));
+
+        float seed;
+        if (m_data.closingAnim) {
+            seed = m_data.closingAnim->seed;
+        } else if (m_data.deco) {
+            auto w = m_data.deco->m_pWindow.lock();
+            seed = w ? static_cast<float>(w->getPID()) : 0.0f;
+        } else {
+            seed = 0.0f;
+        }
+        glUniform1f(shader->uSeed, seed);
 
     } else if (effect == BMW_EFFECT_TV) {
         static auto* const PTVCOLOR = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:tv_color")->getDataStaticPtr();
@@ -166,9 +221,10 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
+    // Clean up GL state
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(texPtr->m_target, 0);
-
+    g_pHyprOpenGL->useProgram(0);
     g_pHyprOpenGL->scissor(nullptr);
 }

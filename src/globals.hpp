@@ -1,6 +1,9 @@
 #pragma once
 
+#include <chrono>
+#include <vector>
 #include <hyprland/src/plugins/PluginAPI.hpp>
+#include <hyprland/src/render/OpenGL.hpp>
 
 inline HANDLE PHANDLE = nullptr;
 
@@ -49,11 +52,31 @@ struct SBMWShader {
     GLint  texAttrib = -1;
 };
 
+struct SClosingAnimation {
+    PHLWINDOWREF    window;      // keep ref to prevent premature cleanup
+    eBMWEffect      effect;
+    float           duration;
+    float           seed;
+    std::chrono::steady_clock::time_point startTime;
+
+    // Captured at close time (window may be destroyed before we render)
+    Vector2D        windowPos;
+    Vector2D        windowSize;
+    SP<CTexture>    snapshotTex;  // held reference to snapshot texture
+
+    float getProgress() const {
+        auto now = std::chrono::steady_clock::now();
+        float elapsed = std::chrono::duration<float>(now - startTime).count();
+        return std::clamp(elapsed / duration, 0.0f, 1.0f);
+    }
+};
+
 struct SGlobalState {
     SBMWShader      fireShader;
     SBMWShader      tvShader;
     SBMWShader      pixelateShader;
-    wl_event_source* tick = nullptr;
+
+    std::vector<SClosingAnimation> closingAnimations;
 };
 
 inline UP<SGlobalState> g_pGlobalState;
