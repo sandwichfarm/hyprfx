@@ -14,7 +14,7 @@
     },
   ];
 
-  const baseUrl = 'https://raw.githubusercontent.com/sandwichfarm/hyprfx/main/';
+  const baseUrl = 'https://raw.githubusercontent.com/sandwichfarm/hyprfx/master/';
 </script>
 
 <div class="w-full max-w-4xl mb-16">
