@@ -1,0 +1,7 @@
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/burn-my-windows.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/edit_cache.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/rebuild_cache.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/list_install_components.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/install.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/install/local.dir
+/home/sandwich/Develop/burn-my-windows-hyprland/build/CMakeFiles/install/strip.dir

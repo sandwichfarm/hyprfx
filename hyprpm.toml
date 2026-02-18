@@ -1,0 +1,12 @@
+[repository]
+name = "burn-my-windows-hyprland"
+authors = ["sandwich"]
+
+[burn-my-windows]
+description = "GPU-accelerated window open/close effects (fire, TV, pixelate) ported from Burn My Windows"
+authors = ["sandwich"]
+output = "build/libburn-my-windows.so"
+build = [
+    "cmake -B build",
+    "cmake --build build",
+]
