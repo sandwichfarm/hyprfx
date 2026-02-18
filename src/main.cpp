@@ -24,27 +24,27 @@ static SP<HOOK_CALLBACK_FN> g_pRenderHook;
 
 void onOpenWindow(void* self, std::any data) {
     const auto PWINDOW = std::any_cast<PHLWINDOW>(data);
-    Log::logger->log(Log::DEBUG, "[BMW] onOpenWindow fired for window {:x}", (uintptr_t)PWINDOW.get());
+    Log::logger->log(Log::DEBUG, "[HFX] onOpenWindow fired for window {:x}", (uintptr_t)PWINDOW.get());
 
-    static auto* const PEFFECT = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:open_effect")->getDataStaticPtr();
+    static auto* const PEFFECT = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:open_effect")->getDataStaticPtr();
     std::string effectName = *PEFFECT;
     if (effectName.empty() || effectName == "none" || !EffectRegistry::instance().hasEffect(effectName))
         return;
 
-    HyprlandAPI::addWindowDecoration(PHANDLE, PWINDOW, makeUnique<CBMWDecoration>(PWINDOW, false));
-    Log::logger->log(Log::DEBUG, "[BMW] open decoration attached");
+    HyprlandAPI::addWindowDecoration(PHANDLE, PWINDOW, makeUnique<CHFXDecoration>(PWINDOW, false));
+    Log::logger->log(Log::DEBUG, "[HFX] open decoration attached");
 }
 
 void onCloseWindow(void* self, std::any data) {
     const auto PWINDOW = std::any_cast<PHLWINDOW>(data);
-    Log::logger->log(Log::DEBUG, "[BMW] onCloseWindow fired for window {:x}", (uintptr_t)PWINDOW.get());
+    Log::logger->log(Log::DEBUG, "[HFX] onCloseWindow fired for window {:x}", (uintptr_t)PWINDOW.get());
 
-    static auto* const PEFFECT = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:close_effect")->getDataStaticPtr();
+    static auto* const PEFFECT = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:close_effect")->getDataStaticPtr();
     std::string effectName = *PEFFECT;
     if (effectName.empty() || effectName == "none" || !EffectRegistry::instance().hasEffect(effectName))
         return;
 
-    static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:duration")->getDataStaticPtr();
+    static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:duration")->getDataStaticPtr();
     float duration = static_cast<float>(**PDURATION);
     if (duration <= 0.0f)
         duration = 1.0f;
@@ -62,13 +62,13 @@ void onCloseWindow(void* self, std::any data) {
     PHLWINDOWREF ref{PWINDOW};
     if (g_pHyprOpenGL->m_windowFramebuffers.contains(ref)) {
         anim.snapshotTex = g_pHyprOpenGL->m_windowFramebuffers.at(ref).getTexture();
-        Log::logger->log(Log::DEBUG, "[BMW] close animation: captured snapshot tex={}", anim.snapshotTex ? anim.snapshotTex->m_texID : 0);
+        Log::logger->log(Log::DEBUG, "[HFX] close animation: captured snapshot tex={}", anim.snapshotTex ? anim.snapshotTex->m_texID : 0);
     } else {
         auto wlSurf = PWINDOW->wlSurface();
         auto surface = wlSurf ? wlSurf->resource() : nullptr;
         if (surface && surface->m_current.texture) {
             anim.snapshotTex = surface->m_current.texture;
-            Log::logger->log(Log::DEBUG, "[BMW] close animation: using surface tex={}", anim.snapshotTex->m_texID);
+            Log::logger->log(Log::DEBUG, "[HFX] close animation: using surface tex={}", anim.snapshotTex->m_texID);
         }
     }
 
@@ -80,7 +80,7 @@ void onCloseWindow(void* self, std::any data) {
 
     g_pHyprRenderer->damageBox(dm);
 
-    Log::logger->log(Log::DEBUG, "[BMW] close animation tracked (duration={}, hasTex={})", duration, hasTex);
+    Log::logger->log(Log::DEBUG, "[HFX] close animation tracked (duration={}, hasTex={})", duration, hasTex);
 }
 
 void onRender(void* self, std::any data) {
@@ -116,11 +116,11 @@ void onRender(void* self, std::any data) {
             }
         }
 
-        auto passData = CBMWPassElement::SBMWData{};
+        auto passData = CHFXPassElement::SHFXData{};
         passData.alpha = 1.0f;
         passData.pMonitor = pMonitor;
         passData.closingAnim = &(*it);
-        g_pHyprRenderer->m_renderPass.add(makeUnique<CBMWPassElement>(passData));
+        g_pHyprRenderer->m_renderPass.add(makeUnique<CHFXPassElement>(passData));
 
         CBox dm = {it->windowPos.x, it->windowPos.y,
                    it->windowSize.x, it->windowSize.y};
@@ -136,14 +136,14 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     const std::string HASH = __hyprland_api_get_hash();
     if (HASH != GIT_COMMIT_HASH) {
         HyprlandAPI::addNotification(PHANDLE,
-            std::format("[BMW] Warning: hash mismatch (server={}, client={})", HASH, GIT_COMMIT_HASH),
+            std::format("[HFX] Warning: hash mismatch (server={}, client={})", HASH, GIT_COMMIT_HASH),
             CHyprColor{1.0, 1.0, 0.2, 1.0}, 8000);
     }
 
     // Core config values
-    HyprlandAPI::addConfigValue(PHANDLE, "plugin:bmw:close_effect", Hyprlang::STRING{"fire"});
-    HyprlandAPI::addConfigValue(PHANDLE, "plugin:bmw:open_effect", Hyprlang::STRING{"fire"});
-    HyprlandAPI::addConfigValue(PHANDLE, "plugin:bmw:duration", Hyprlang::FLOAT{1.0});
+    HyprlandAPI::addConfigValue(PHANDLE, "plugin:hfx:close_effect", Hyprlang::STRING{"fire"});
+    HyprlandAPI::addConfigValue(PHANDLE, "plugin:hfx:open_effect", Hyprlang::STRING{"fire"});
+    HyprlandAPI::addConfigValue(PHANDLE, "plugin:hfx:duration", Hyprlang::FLOAT{1.0});
 
     // Register all effect-specific config values
     EffectRegistry::instance().registerAllConfigs(PHANDLE);
@@ -166,13 +166,13 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 
     HyprlandAPI::reloadConfig();
 
-    HyprlandAPI::addNotification(PHANDLE, "[BMW] Burn My Windows initialized successfully!", CHyprColor{0.2, 1.0, 0.2, 1.0}, 5000);
+    HyprlandAPI::addNotification(PHANDLE, "[HFX] HyprFX initialized successfully!", CHyprColor{0.2, 1.0, 0.2, 1.0}, 5000);
 
-    return {"burn-my-windows", "GPU-accelerated window open/close effects (fire, TV, pixelate)", "sandwich", "0.1"};
+    return {"hyprfx", "GPU-accelerated window open/close effects (fire, TV, pixelate)", "sandwich", "0.1"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT() {
-    g_pHyprRenderer->m_renderPass.removeAllOfType("CBMWPassElement");
+    g_pHyprRenderer->m_renderPass.removeAllOfType("CHFXPassElement");
 
     if (g_pGlobalState) {
         g_pGlobalState->closingAnimations.clear();

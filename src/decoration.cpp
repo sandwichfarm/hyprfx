@@ -6,45 +6,45 @@
 #include <hyprland/src/desktop/view/Window.hpp>
 #include <hyprland/src/render/Renderer.hpp>
 
-CBMWDecoration::CBMWDecoration(PHLWINDOW pWindow, bool isClosing)
+CHFXDecoration::CHFXDecoration(PHLWINDOW pWindow, bool isClosing)
     : IHyprWindowDecoration(pWindow), m_pWindow(pWindow), m_bIsClosing(isClosing) {
 
     m_startTime = std::chrono::steady_clock::now();
 
     if (isClosing) {
-        static auto* const PCLOSE = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:close_effect")->getDataStaticPtr();
+        static auto* const PCLOSE = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:close_effect")->getDataStaticPtr();
         m_effectName = *PCLOSE;
     } else {
-        static auto* const POPEN = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:open_effect")->getDataStaticPtr();
+        static auto* const POPEN = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:open_effect")->getDataStaticPtr();
         m_effectName = *POPEN;
     }
 
-    static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:bmw:duration")->getDataStaticPtr();
+    static auto* const PDURATION = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hfx:duration")->getDataStaticPtr();
     m_fDuration = static_cast<float>(**PDURATION);
 
     if (m_fDuration <= 0.0f)
         m_fDuration = 1.0f;
 }
 
-CBMWDecoration::~CBMWDecoration() {
+CHFXDecoration::~CHFXDecoration() {
     damageEntire();
 }
 
-float CBMWDecoration::getProgress() const {
+float CHFXDecoration::getProgress() const {
     auto now = std::chrono::steady_clock::now();
     float elapsed = std::chrono::duration<float>(now - m_startTime).count();
     return std::clamp(elapsed / m_fDuration, 0.0f, 1.0f);
 }
 
-SDecorationPositioningInfo CBMWDecoration::getPositioningInfo() {
+SDecorationPositioningInfo CHFXDecoration::getPositioningInfo() {
     return {DECORATION_POSITION_ABSOLUTE};
 }
 
-void CBMWDecoration::onPositioningReply(const SDecorationPositioningReply& reply) {
+void CHFXDecoration::onPositioningReply(const SDecorationPositioningReply& reply) {
     // ignored
 }
 
-void CBMWDecoration::draw(PHLMONITOR pMonitor, const float& a) {
+void CHFXDecoration::draw(PHLMONITOR pMonitor, const float& a) {
     const auto PWINDOW = m_pWindow.lock();
     if (!PWINDOW || m_effectName.empty() || !EffectRegistry::instance().hasEffect(m_effectName))
         return;
@@ -56,25 +56,25 @@ void CBMWDecoration::draw(PHLMONITOR pMonitor, const float& a) {
         return;
     }
 
-    auto data = CBMWPassElement::SBMWData{};
+    auto data = CHFXPassElement::SHFXData{};
     data.deco = this;
     data.alpha = a;
     data.pMonitor = pMonitor;
-    g_pHyprRenderer->m_renderPass.add(makeUnique<CBMWPassElement>(data));
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CHFXPassElement>(data));
 
     damageEntire();
 }
 
-eDecorationType CBMWDecoration::getDecorationType() {
+eDecorationType CHFXDecoration::getDecorationType() {
     return DECORATION_CUSTOM;
 }
 
-void CBMWDecoration::updateWindow(PHLWINDOW pWindow) {
+void CHFXDecoration::updateWindow(PHLWINDOW pWindow) {
     if (!m_bDone)
         damageEntire();
 }
 
-void CBMWDecoration::damageEntire() {
+void CHFXDecoration::damageEntire() {
     const auto PWINDOW = m_pWindow.lock();
     if (!PWINDOW)
         return;
@@ -84,10 +84,10 @@ void CBMWDecoration::damageEntire() {
     g_pHyprRenderer->damageBox(dm);
 }
 
-eDecorationLayer CBMWDecoration::getDecorationLayer() {
+eDecorationLayer CHFXDecoration::getDecorationLayer() {
     return DECORATION_LAYER_OVERLAY;
 }
 
-std::string CBMWDecoration::getDisplayName() {
-    return "BMWEffect";
+std::string CHFXDecoration::getDisplayName() {
+    return "HFXEffect";
 }

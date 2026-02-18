@@ -3,28 +3,28 @@
 #include <hyprland/src/render/pass/PassElement.hpp>
 #include "globals.hpp"
 
-class CBMWDecoration;
+class CHFXDecoration;
 
-class CBMWPassElement : public IPassElement {
+class CHFXPassElement : public IPassElement {
   public:
-    struct SBMWData {
-        CBMWDecoration*   deco        = nullptr;
+    struct SHFXData {
+        CHFXDecoration*   deco        = nullptr;
         SClosingAnimation* closingAnim = nullptr;
         float              alpha       = 1.0f;
         PHLMONITORREF      pMonitor;
     };
 
-    CBMWPassElement(const SBMWData& data);
-    virtual ~CBMWPassElement() = default;
+    CHFXPassElement(const SHFXData& data);
+    virtual ~CHFXPassElement() = default;
 
     virtual void                draw(const CRegion& damage);
     virtual bool                needsLiveBlur();
     virtual bool                needsPrecomputeBlur();
     virtual std::optional<CBox> boundingBox();
-    virtual const char*         passName() { return "CBMWPassElement"; }
+    virtual const char*         passName() { return "CHFXPassElement"; }
 
   private:
-    SBMWData m_data;
+    SHFXData m_data;
 
     void renderEffect(PHLMONITOR pMonitor, float alpha);
 };

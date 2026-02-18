@@ -20,7 +20,7 @@ void main() {
 }
 )#";
 
-// Common GLSL utilities (ported from Burn My Windows common.glsl)
+// Common GLSL utilities (ported from common.glsl (originally from Burn My Windows))
 // Stripped of GNOME/KWin platform abstractions, adapted for direct texture access.
 inline const std::string HFX_COMMON = R"#(
 #version 300 es

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.27)
 
-project(burn-my-windows
-    DESCRIPTION "Burn My Windows effects for Hyprland"
+project(hyprfx
+    DESCRIPTION "GPU-accelerated window effects for Hyprland"
     VERSION 0.1
 )
 
@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 file(GLOB_RECURSE SRC "src/*.cpp")
 
-add_library(burn-my-windows SHARED ${SRC})
+add_library(hyprfx SHARED ${SRC})
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET
@@ -22,6 +22,6 @@ pkg_check_modules(deps REQUIRED IMPORTED_TARGET
     wayland-server
     xkbcommon
 )
-target_link_libraries(burn-my-windows PRIVATE rt PkgConfig::deps)
+target_link_libraries(hyprfx PRIVATE rt PkgConfig::deps)
 
-install(TARGETS burn-my-windows)
+install(TARGETS hyprfx)

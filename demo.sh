@@ -1,5 +1,5 @@
 #!/bin/bash
-# BMW Effects Demo — cycles through fire, tv, and pixelate effects
+# HyprFX Effects Demo — cycles through fire, tv, and pixelate effects
 # Run inside nested Hyprland: Hyprland -c test.conf
 
 DELAY_BEFORE=1.5   # pause before spawning
@@ -12,13 +12,13 @@ sleep 2  # let the compositor settle
 
 for effect in "${effects[@]}"; do
     # Set both open and close to the current effect
-    hyprctl keyword plugin:bmw:open_effect "$effect"
-    hyprctl keyword plugin:bmw:close_effect "$effect"
+    hyprctl keyword plugin:hfx:open_effect "$effect"
+    hyprctl keyword plugin:hfx:close_effect "$effect"
 
     sleep "$DELAY_BEFORE"
 
     # Spawn a kitty window (open effect plays)
-    kitty --title "BMW Demo: $effect" -e sleep 999 &
+    kitty --title "HyprFX Demo: $effect" -e sleep 999 &
     KPID=$!
 
     sleep "$DELAY_SHOW"
@@ -31,5 +31,5 @@ for effect in "${effects[@]}"; do
 done
 
 # Show a final message
-hyprctl keyword plugin:bmw:open_effect fire
+hyprctl keyword plugin:hfx:open_effect fire
 kitty --title "Demo Complete" -e sh -c 'echo "All effects demonstrated!"; echo "Press Enter to exit."; read' &

@@ -8,10 +8,10 @@
 #include <hyprland/src/render/decorations/IHyprWindowDecoration.hpp>
 #include "globals.hpp"
 
-class CBMWDecoration : public IHyprWindowDecoration {
+class CHFXDecoration : public IHyprWindowDecoration {
   public:
-    CBMWDecoration(PHLWINDOW pWindow, bool isClosing);
-    virtual ~CBMWDecoration();
+    CHFXDecoration(PHLWINDOW pWindow, bool isClosing);
+    virtual ~CHFXDecoration();
 
     virtual SDecorationPositioningInfo getPositioningInfo();
     virtual void                       onPositioningReply(const SDecorationPositioningReply& reply);
@@ -35,5 +35,5 @@ class CBMWDecoration : public IHyprWindowDecoration {
 
     SP<HOOK_CALLBACK_FN> m_pTickCb;
 
-    friend class CBMWPassElement;
+    friend class CHFXPassElement;
 };

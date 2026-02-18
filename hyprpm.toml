@@ -1,11 +1,11 @@
 [repository]
-name = "burn-my-windows-hyprland"
+name = "hyprfx"
 authors = ["sandwich"]
 
-[burn-my-windows]
-description = "GPU-accelerated window open/close effects (fire, TV, pixelate) ported from Burn My Windows"
+[hyprfx]
+description = "GPU-accelerated window open/close effects for Hyprland"
 authors = ["sandwich"]
-output = "build/libburn-my-windows.so"
+output = "build/libhyprfx.so"
 build = [
     "cmake -B build",
     "cmake --build build",

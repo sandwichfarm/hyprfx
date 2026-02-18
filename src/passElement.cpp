@@ -7,9 +7,9 @@
 #include <hyprland/src/render/OpenGL.hpp>
 #include <hyprland/src/render/Renderer.hpp>
 
-CBMWPassElement::CBMWPassElement(const CBMWPassElement::SBMWData& data) : m_data(data) {}
+CHFXPassElement::CHFXPassElement(const CHFXPassElement::SHFXData& data) : m_data(data) {}
 
-void CBMWPassElement::draw(const CRegion& damage) {
+void CHFXPassElement::draw(const CRegion& damage) {
     auto pMonitor = g_pHyprOpenGL->m_renderData.pMonitor.lock();
     if (!pMonitor)
         return;
@@ -17,15 +17,15 @@ void CBMWPassElement::draw(const CRegion& damage) {
     renderEffect(pMonitor, m_data.alpha);
 }
 
-bool CBMWPassElement::needsLiveBlur() {
+bool CHFXPassElement::needsLiveBlur() {
     return false;
 }
 
-bool CBMWPassElement::needsPrecomputeBlur() {
+bool CHFXPassElement::needsPrecomputeBlur() {
     return false;
 }
 
-std::optional<CBox> CBMWPassElement::boundingBox() {
+std::optional<CBox> CHFXPassElement::boundingBox() {
     Vector2D pos, size;
 
     if (m_data.closingAnim) {
@@ -50,7 +50,7 @@ std::optional<CBox> CBMWPassElement::boundingBox() {
                 size.x, size.y};
 }
 
-void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
+void CHFXPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
     std::string effectName;
     float progress;
     float duration;
@@ -79,7 +79,7 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
     auto* effect = EffectRegistry::instance().getEffect(effectName);
     auto* shader = EffectRegistry::instance().getShader(effectName);
     if (!effect || !shader || !shader->program) {
-        Log::logger->log(Log::DEBUG, "[BMW] renderEffect: no shader for '{}'", effectName);
+        Log::logger->log(Log::DEBUG, "[HFX] renderEffect: no shader for '{}'", effectName);
         return;
     }
 
@@ -104,7 +104,7 @@ void CBMWPassElement::renderEffect(PHLMONITOR pMonitor, float alpha) {
     }
 
     if (!texPtr || texPtr->m_texID == 0) {
-        Log::logger->log(Log::DEBUG, "[BMW] renderEffect: no texture (closing={})", m_data.closingAnim != nullptr);
+        Log::logger->log(Log::DEBUG, "[HFX] renderEffect: no texture (closing={})", m_data.closingAnim != nullptr);
         return;
     }
 

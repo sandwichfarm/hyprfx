@@ -56,7 +56,7 @@ class TVEffect : public IEffect {
     std::string fragmentSource() const override { return TV_FRAG; }
 
     void registerConfig(HANDLE handle) const override {
-        HyprlandAPI::addConfigValue(handle, "plugin:bmw:tv_color", Hyprlang::INT{*configStringToInt("rgba(c8c8c8ff)")});
+        HyprlandAPI::addConfigValue(handle, "plugin:hfx:tv_color", Hyprlang::INT{*configStringToInt("rgba(c8c8c8ff)")});
     }
 
     std::vector<std::string> uniformNames() const override {
@@ -64,7 +64,7 @@ class TVEffect : public IEffect {
     }
 
     void setUniforms(const SHFXShader& shader, HANDLE handle, float seed) const override {
-        static auto* const PTVCOLOR = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(handle, "plugin:bmw:tv_color")->getDataStaticPtr();
+        static auto* const PTVCOLOR = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(handle, "plugin:hfx:tv_color")->getDataStaticPtr();
         float tc[4];
         colorToVec4(**PTVCOLOR, tc);
         glUniform4f(shader.uniforms.at("uColor"), tc[0], tc[1], tc[2], tc[3]);

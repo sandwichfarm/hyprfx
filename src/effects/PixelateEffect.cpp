@@ -27,8 +27,8 @@ class PixelateEffect : public IEffect {
     std::string fragmentSource() const override { return PIXELATE_FRAG; }
 
     void registerConfig(HANDLE handle) const override {
-        HyprlandAPI::addConfigValue(handle, "plugin:bmw:pixelate_pixel_size", Hyprlang::FLOAT{40.0});
-        HyprlandAPI::addConfigValue(handle, "plugin:bmw:pixelate_noise", Hyprlang::FLOAT{0.5});
+        HyprlandAPI::addConfigValue(handle, "plugin:hfx:pixelate_pixel_size", Hyprlang::FLOAT{40.0});
+        HyprlandAPI::addConfigValue(handle, "plugin:hfx:pixelate_noise", Hyprlang::FLOAT{0.5});
     }
 
     std::vector<std::string> uniformNames() const override {
@@ -36,8 +36,8 @@ class PixelateEffect : public IEffect {
     }
 
     void setUniforms(const SHFXShader& shader, HANDLE handle, float seed) const override {
-        static auto* const PPIXSIZE = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(handle, "plugin:bmw:pixelate_pixel_size")->getDataStaticPtr();
-        static auto* const PPIXNOISE = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(handle, "plugin:bmw:pixelate_noise")->getDataStaticPtr();
+        static auto* const PPIXSIZE = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(handle, "plugin:hfx:pixelate_pixel_size")->getDataStaticPtr();
+        static auto* const PPIXNOISE = (Hyprlang::FLOAT* const*)HyprlandAPI::getConfigValue(handle, "plugin:hfx:pixelate_noise")->getDataStaticPtr();
         glUniform1f(shader.uniforms.at("uPixelSize"), static_cast<float>(**PPIXSIZE));
         glUniform1f(shader.uniforms.at("uNoise"), static_cast<float>(**PPIXNOISE));
     }
